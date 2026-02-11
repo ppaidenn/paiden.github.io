@@ -1108,7 +1108,7 @@
   <div class="slide"><img src="images/header/lake.JPG" alt="lake" /></div>
   <div class="slide"><img src="images/header/avalanche.JPG" alt="avalanche" /></div>
   <div class="slide"><img src="images/header/sistine.JPG" alt="sistine" /></div>
-  <div class="slide"><img src="images/header/falls.jpg" alt="falls" /></div>
+  <div class="slide"><img src="images/header/falls.JPG" alt="falls" /></div>
   <div class="slide"><img src="images/header/swiss.JPG" alt="Swiss" /></div>
 </div>
 <!-- BLOG -->
@@ -1295,10 +1295,10 @@
     document.getElementById("last-updated").innerText =
       "Today's Date: " + new Date().toLocaleDateString();
 
-    // ===== Blog logic (static posts + Supabase posts) =====
+    // ===== Blog logic (static posts + sb posts) =====
     const SUPABASE_URL = "https://irauuqhqqkctcwulqzsw.supabase.co";
     const SUPABASE_KEY = "sb_publishable_93dGo8oZILIYg9NSotz9MQ_T8v22oXR";
-    const supabase = (window.supabase && window.supabase.createClient)
+    const sb = (window.supabase && window.supabase.createClient)
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
       : null;
 
@@ -1378,11 +1378,11 @@ const titleEl = document.getElementById("postTitle");
     }
 
     async function loadPostsFromSupabase() {
-      if (!supabase) {
-        console.error("Supabase client not available. Check script load or ad blockers.");
+      if (!sb) {
+        console.error("sb client not available. Check script load or ad blockers.");
         return [];
       }
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("posts")
         .select("id,title,author,body,images,created_at")
         .order("created_at", { ascending: false });
@@ -1656,7 +1656,7 @@ function excerpt(text, maxChars = 1000) {
 
     // Publish
     btnPublish.addEventListener("click", async () => {
-      if (!supabase) {
+      if (!sb) {
         alert("Post service unavailable. Please refresh or disable blockers.");
         return;
       }
@@ -1676,7 +1676,7 @@ function excerpt(text, maxChars = 1000) {
         images: draftImages.slice(0, 18) // keep it reasonable
       };
 
-      const { error } = await supabase.from("posts").insert([post]);
+      const { error } = await sb.from("posts").insert([post]);
       if (error) {
         console.error("Failed to publish post:", error);
         alert("Post could not be published. Please try again.");
@@ -1836,4 +1836,7 @@ function excerpt(text, maxChars = 1000) {
   </script>
 </body>
 </html>
+
+
+
 
