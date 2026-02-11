@@ -1712,6 +1712,7 @@ function excerpt(text, maxChars = 1000) {
 
       // log print statement
       console.log("turnstile token", turnstileToken);
+      console.log("turnstile token length", turnstileToken ? turnstileToken.length : 0);
 
       const resp = await fetch(`${SUPABASE_URL}/functions/v1/dynamic-service`, {
         method: "POST",
