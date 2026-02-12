@@ -458,6 +458,32 @@
         font-size: 5vw; /* Larger icons on small screens */
       }
     }
+
+    @media (max-width: 600px) {
+      .footer-inner {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        column-gap: 4vw;
+        align-items: start;
+      }
+      .footer-left { min-width: 0; }
+      .footer-nav {
+        position: static;
+        top: auto;
+        left: auto;
+        transform: none;
+        margin: 0;
+        padding-top: 0.2rem;
+      }
+      .footer-nav a {
+        line-height: 1.25;
+        margin-bottom: 0.35rem;
+      }
+      .footer-social {
+        margin-left: auto;
+        align-items: flex-end;
+      }
+    }
   </style>
 </head>
 <body>
@@ -700,7 +726,7 @@
 
             if (resp.status === 429) {
               const wait = formatWaitTime(errJson?.wait_seconds);
-              setContactStatus("error", `Please wait ${wait} between messages.`);
+              setContactStatus("error", `Please wait ${wait} before sending your next message.`);
             } else {
               setContactStatus("error", errJson?.message || errJson?.error || "Could not send message. Please try again.");
             }
