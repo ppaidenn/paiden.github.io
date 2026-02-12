@@ -352,6 +352,31 @@
       transform: translateY(-0.12vw);
       box-shadow: 0 16px 34px rgba(0,0,0,0.14);
     }
+    .contact-form button:disabled{
+      opacity: 0.72;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+    .form-status{
+      margin: 0 0 1.2vw 0;
+      min-height: 1.2em;
+      font-size: 0.95vw;
+      font-weight: 700;
+      color: #444;
+    }
+    .form-status.is-hidden{
+      visibility: hidden;
+    }
+    .form-status.is-info{
+      color: #274472;
+    }
+    .form-status.is-success{
+      color: #1f6a36;
+    }
+    .form-status.is-error{
+      color: #8b1e1e;
+    }
 
     .contact-right{
       display: grid;
@@ -407,6 +432,7 @@
       .contact-form textarea{ font-size: 14px; padding: 12px 14px; margin-bottom: 18px; }
       .contact-form textarea{ min-height: 160px; }
       .contact-form button{ font-size: 14px; padding: 10px 14px; }
+      .form-status{ font-size: 13px; margin: 0 0 14px 0; }
       .contact-right{ gap: 12px; }
       .contact-action{ font-size: 15px; padding: 14px 16px; border-radius: 16px; }
       .contact-action i{ font-size: 18px; }
@@ -500,7 +526,8 @@
             <div class="turnstile-wrap">
               <div class="cf-turnstile" data-sitekey="0x4AAAAAACayR7BTiRED3OPy" data-callback="onTurnstileContact" data-expired-callback="onTurnstileContactExpired"></div>
             </div>
-            <button type="submit">Send</button>
+            <p id="contactStatus" class="form-status is-hidden" role="status" aria-live="polite"></p>
+            <button id="contactSubmitBtn" type="submit">Send</button>
           </form>
         </div>
 
@@ -603,6 +630,25 @@
     let contactTurnstileToken = "";
     window.onTurnstileContact = (token) => { contactTurnstileToken = token || ""; };
     window.onTurnstileContactExpired = () => { contactTurnstileToken = ""; };
+    const contactStatusEl = document.getElementById("contactStatus");
+    const contactSubmitBtn = document.getElementById("contactSubmitBtn");
+    function setContactStatus(type, text) {
+      if (!contactStatusEl) return;
+      contactStatusEl.className = "form-status";
+      if (!text) {
+        contactStatusEl.classList.add("is-hidden");
+        contactStatusEl.textContent = "";
+        return;
+      }
+      const statusType = ["info", "success", "error"].includes(type) ? type : "info";
+      contactStatusEl.classList.add(`is-${statusType}`);
+      contactStatusEl.textContent = text;
+    }
+    function setContactSubmitting(isSubmitting) {
+      if (!contactSubmitBtn) return;
+      contactSubmitBtn.disabled = !!isSubmitting;
+      contactSubmitBtn.textContent = isSubmitting ? "Sending..." : "Send";
+    }
     function formatWaitTime(seconds) {
       const total = Math.max(1, Number(seconds) || 0);
       if (total < 60) {
@@ -620,50 +666,60 @@
     if (contactForm) {
       contactForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        setContactStatus("", "");
         const name = (document.getElementById("name")?.value || "").trim();
         const email = (document.getElementById("email")?.value || "").trim();
         const message = (document.getElementById("message")?.value || "").trim();
 
         if (!message) {
-          alert("Please enter a message.");
+          setContactStatus("error", "Please enter a message.");
           return;
         }
         if (!contactTurnstileToken) {
-          alert("Please complete the anti-spam check.");
+          setContactStatus("error", "Please complete the anti-spam check.");
           return;
         }
 
         const payload = { name, message, turnstile_token: contactTurnstileToken };
         if (email) payload.email = email;
-        const resp = await fetch(CONTACT_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        if (!resp.ok) {
-          let errJson = null;
-          try {
-            errJson = await resp.json();
-          } catch (_) {
-            // Ignore non-JSON error responses and show fallback text.
+        setContactSubmitting(true);
+        setContactStatus("info", "Sending...");
+        try {
+          const resp = await fetch(CONTACT_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!resp.ok) {
+            let errJson = null;
+            try {
+              errJson = await resp.json();
+            } catch (_) {
+              // Ignore non-JSON error responses and show fallback text.
+            }
+
+            if (resp.status === 429) {
+              const wait = formatWaitTime(errJson?.wait_seconds);
+              setContactStatus("error", `Please wait ${wait} between messages.`);
+            } else {
+              setContactStatus("error", errJson?.message || errJson?.error || "Could not send message. Please try again.");
+            }
+            console.error("Contact error:", errJson);
+            return;
           }
 
-          if (resp.status === 429) {
-            const wait = formatWaitTime(errJson?.wait_seconds);
-            alert(`Please wait ${wait} before sending another message.`);
-          } else {
-            alert(errJson?.message || errJson?.error || "Could not send message. Please try again.");
+          contactForm.reset();
+          contactTurnstileToken = "";
+          if (window.turnstile && window.turnstile.reset) {
+            window.turnstile.reset();
           }
-          console.error("Contact error:", errJson);
-          return;
+          setContactStatus("success", "Message sent. Thanks!");
+        } catch (err) {
+          console.error("Contact error:", err);
+          setContactStatus("error", "Could not send message. Please try again.");
+        } finally {
+          setContactSubmitting(false);
         }
-
-        contactForm.reset();
-        contactTurnstileToken = "";
-        if (window.turnstile && window.turnstile.reset) {
-          window.turnstile.reset();
-        }
-        alert("Message sent. Thanks!");
       });
     }
   </script>
