@@ -603,6 +603,18 @@
     let contactTurnstileToken = "";
     window.onTurnstileContact = (token) => { contactTurnstileToken = token || ""; };
     window.onTurnstileContactExpired = () => { contactTurnstileToken = ""; };
+    function formatWaitTime(seconds) {
+      const total = Math.max(1, Number(seconds) || 0);
+      if (total < 60) {
+        return `${total} second${total === 1 ? "" : "s"}`;
+      }
+      const minutes = Math.floor(total / 60);
+      const remainingSeconds = total % 60;
+      if (!remainingSeconds) {
+        return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+      }
+      return `${minutes} minute${minutes === 1 ? "" : "s"} ${remainingSeconds} second${remainingSeconds === 1 ? "" : "s"}`;
+    }
 
     const contactForm = document.getElementById("contactForm");
     if (contactForm) {
@@ -629,9 +641,20 @@
           body: JSON.stringify(payload)
         });
         if (!resp.ok) {
-          const msg = await resp.text().catch(() => "");
-          alert("Could not send message. Please try again.");
-          console.error("Contact error:", msg);
+          let errJson = null;
+          try {
+            errJson = await resp.json();
+          } catch (_) {
+            // Ignore non-JSON error responses and show fallback text.
+          }
+
+          if (resp.status === 429) {
+            const wait = formatWaitTime(errJson?.wait_seconds);
+            alert(`Please wait ${wait} between messages.`);
+          } else {
+            alert(errJson?.message || errJson?.error || "Could not send message. Please try again.");
+          }
+          console.error("Contact error:", errJson);
           return;
         }
 
