@@ -228,25 +228,6 @@
       font-size: 0.95rem;
       line-height: 1.35;
     }
-    .composer-status{
-      margin: 10px 0 0;
-      min-height: 1.2em;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: rgba(11,15,20,0.7);
-    }
-    .composer-status.is-hidden{
-      visibility: hidden;
-    }
-    .composer-status.is-info{
-      color: #274472;
-    }
-    .composer-status.is-success{
-      color: #1f6a36;
-    }
-    .composer-status.is-error{
-      color: #8b1e1e;
-    }
 
     .composer-actions {
       display: flex;
@@ -1288,7 +1269,6 @@ Note: I am notified of all posts and will be moderating content. You do not have
 	<div class="turnstile-wrap">
 	  <div class="cf-turnstile" data-sitekey="0x4AAAAAACayR7BTiRED3OPy" data-callback="onTurnstile" data-expired-callback="onTurnstileExpired"></div>
 	</div>
-<p class="composer-status is-hidden" id="publishStatus" role="status" aria-live="polite"></p>
 <div aria-label="Photo preview" class="preview-grid" id="photoPreview"></div>
 <p class="muted-note">Tip: the first 3 photos become the “thumbnail row” on the post card.</p>
 </div>
@@ -1407,21 +1387,8 @@ const titleEl = document.getElementById("postTitle");
     const photosEl = document.getElementById("postPhotos");
     const previewEl = document.getElementById("photoPreview");
     const btnPublish = document.getElementById("btnPublish");
-    const publishStatusEl = document.getElementById("publishStatus");
     const btnClearDraft = document.getElementById("btnClearDraft");
     const PUBLISH_BTN_IDLE_HTML = '<i class="fa-solid fa-paper-plane"></i> Publish';
-    function setPublishStatus(type, text) {
-      if (!publishStatusEl) return;
-      publishStatusEl.className = "composer-status";
-      if (!text) {
-        publishStatusEl.classList.add("is-hidden");
-        publishStatusEl.textContent = "";
-        return;
-      }
-      const statusType = ["info", "success", "error"].includes(type) ? type : "info";
-      publishStatusEl.classList.add(`is-${statusType}`);
-      publishStatusEl.textContent = text;
-    }
     function setPublishSubmitting(isSubmitting) {
       if (!btnPublish) return;
       btnPublish.disabled = !!isSubmitting;
@@ -1769,9 +1736,8 @@ function excerpt(text, maxChars = 1000) {
 
     // Publish
     btnPublish.addEventListener("click", async () => {
-      setPublishStatus("", "");
       if (!sb) {
-        setPublishStatus("error", "Post service unavailable. Please refresh or disable blockers.");
+        alert("Post service unavailable. Please refresh or disable blockers.");
         return;
       }
       const title = (titleEl.value || "").trim();
@@ -1779,7 +1745,7 @@ function excerpt(text, maxChars = 1000) {
       const body = (bodyEl.value || "").trim();
 
       if (!title || !body) {
-        setPublishStatus("error", "Please add at least a title and some body text.");
+        alert("Please add at least a title and some body text.");
         return;
       }
 
@@ -1788,7 +1754,7 @@ function excerpt(text, maxChars = 1000) {
         turnstileToken = "";
       }
       if (!turnstileToken) {
-        setPublishStatus("error", "Please complete the anti-spam check.");
+        alert("Please complete the anti-spam check.");
         return;
       }
 
@@ -1804,7 +1770,6 @@ function excerpt(text, maxChars = 1000) {
       console.log("turnstile token", turnstileToken);
       console.log("turnstile token length", turnstileToken ? turnstileToken.length : 0);
       setPublishSubmitting(true);
-      setPublishStatus("info", "Publishing...");
       try {
         const resp = await fetch(`${SUPABASE_URL}/functions/v1/dynamic-service`, {
           method: "POST",
@@ -1822,9 +1787,9 @@ function excerpt(text, maxChars = 1000) {
           console.error("Failed to publish post:", errJson);
           if (resp.status === 429) {
             const wait = formatWaitTime(errJson?.wait_seconds);
-            setPublishStatus("error", `Please wait ${wait} before sending your next post.`);
+            alert(`Please wait ${wait} before sending your next post.`);
           } else {
-            setPublishStatus("error", errJson?.message || errJson?.error || "Post could not be published. Please try again.");
+            alert(errJson?.message || errJson?.error || "Post could not be published. Please try again.");
           }
           return;
         }
@@ -1838,13 +1803,13 @@ function excerpt(text, maxChars = 1000) {
         if (window.turnstile && window.turnstile.reset) {
           window.turnstile.reset();
         }
-        setPublishStatus("success", "Post published.");
+        alert("Post published.");
         currentPage = 1;
         closeComposer();
         await renderUserPostsIntoGrid();
       } catch (err) {
         console.error("Failed to publish post:", err);
-        setPublishStatus("error", "Post could not be published. Please try again.");
+        alert("Post could not be published. Please try again.");
       } finally {
         setPublishSubmitting(false);
       }
@@ -1862,7 +1827,6 @@ function excerpt(text, maxChars = 1000) {
       composerModal.setAttribute("aria-hidden", "false");
       lockScroll();
       setPublishSubmitting(false);
-      setPublishStatus("", "");
 
       // added for testing
       if (window.turnstile && window.turnstile.reset) {
